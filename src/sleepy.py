@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QRadioButton, \
     QHBoxLayout, QVBoxLayout, QApplication, QLineEdit, QLabel, \
     QPushButton, QMessageBox
-from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtCore import QTimer
 
 import subprocess
 import os
