@@ -33,10 +33,11 @@ class LabeledLineEdit(QWidget):
 
 class CountdownWidget(QWidget):
 
-    def __init__(self, total_time, parent=None):
+    def __init__(self, total_time, close_action, parent=None):
         super().__init__(parent)
 
         self.time_left = total_time
+        self.close_action = close_action
 
         self.label = QLabel('Time left: {}'.format(total_time))
         self.label.setFixedSize(120, 40)
@@ -52,6 +53,10 @@ class CountdownWidget(QWidget):
         self.time_left -= 1
         self.label.setText('Time left: {}'.format(self.time_left))
 
+    def close(self):
+        self.close_action()
+        super().close()
+
 
 
 class Sleepy(QMainWindow):
@@ -62,6 +67,10 @@ class Sleepy(QMainWindow):
         self.shutdown = lambda: subprocess.call(["shutdown", "/s"])
         self.sleep = lambda: os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
 
+        self.setup_central_widget()
+        self.show()
+
+    def setup_central_widget(self):
         self.central_widget = QWidget(self)
 
         rblayout = QHBoxLayout()
@@ -93,7 +102,6 @@ class Sleepy(QMainWindow):
         self.central_widget.setLayout(self.main_layout)
 
         self.setCentralWidget(self.central_widget)
-        self.show()
 
     def start(self):
         seconds = int(self.seconds.text())
@@ -114,11 +122,23 @@ class Sleepy(QMainWindow):
             return
 
         QTimer.singleShot(total_seconds * 1000, action)
+        self.setup_countdown(total_seconds)
+
+    def setup_countdown(self, total_time):
+        self.countdown_timer = QTimer()
+
+        countdown_widget = CountdownWidget(total_time, self.reset_layout)
+        self.setCentralWidget(countdown_widget)
+
+        self.countdown_timer.timeout.connect(countdown_widget.update)
+        self.countdown_timer.start(1000)
+
+    def reset_layout(self):
+        self.setup_central_widget()
 
 
 if __name__ == '__main__':
     app = QApplication([])
-    # w = Sleepy()
-    w = CountdownWidget(50)
+    w = Sleepy()
     w.show()
     app.exec_()
