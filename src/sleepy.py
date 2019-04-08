@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QRadioButton, \
     QHBoxLayout, QVBoxLayout, QApplication, QLineEdit, QLabel, \
     QPushButton, QMessageBox
 from PyQt5.QtCore import QTimer
+from PyQt5.QtGui import QFont
 
 import subprocess
 import os
@@ -40,7 +41,10 @@ class CountdownWidget(QWidget):
         self.close_action = close_action
 
         self.label = QLabel('Time left: {}'.format(total_time))
-        self.label.setFixedSize(120, 40)
+        font = QFont()
+        font.setPixelSize(23)
+        self.label.setFont(font)
+        self.label.setFixedSize(200, 40)
         self.stop_btn = QPushButton('Stop')
         self.stop_btn.clicked.connect(self.close)
 
