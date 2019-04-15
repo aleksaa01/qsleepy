@@ -6,6 +6,7 @@ from PyQt5.QtGui import QFont
 
 import subprocess
 import os
+import time
 
 
 class LabeledLineEdit(QWidget):
@@ -38,6 +39,7 @@ class CountdownWidget(QWidget):
         super().__init__(parent)
 
         self.time_left = total_time
+        self.started_at = time.perf_counter()
         self.close_action = close_action
 
         self.label = QLabel('Time left: {}'.format(total_time))
@@ -54,8 +56,9 @@ class CountdownWidget(QWidget):
         self.setLayout(main_layout)
 
     def update(self):
-        self.time_left -= 1
-        self.label.setText('Time left: {}'.format(self.time_left))
+        curr_time = time.perf_counter()
+        time_passed = int(curr_time - self.started_at)
+        self.label.setText('Time left: {}'.format(self.time_left - time_passed))
 
     def close(self):
         self.close_action()
