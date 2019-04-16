@@ -35,11 +35,11 @@ class LabeledLineEdit(QWidget):
 
 class CountdownWidget(QWidget):
 
-    def __init__(self, total_time, close_action, parent=None):
+    def __init__(self, total_time, started_at, close_action, parent=None):
         super().__init__(parent)
 
         self.time_left = total_time
-        self.started_at = time.perf_counter()
+        self.started_at = started_at
         self.close_action = close_action
 
         self.label = QLabel('Time left: {}'.format(total_time))
@@ -128,16 +128,17 @@ class Sleepy(QMainWindow):
             msg.exec_()
             return
 
-        QTimer.singleShot(total_seconds * 1000, action)
         self.setup_countdown(total_seconds)
+        QTimer.singleShot(total_seconds * 1000, action)
 
     def setup_countdown(self, total_time):
         self.countdown_timer = QTimer()
+        started_at = time.perf_counter()
 
-        countdown_widget = CountdownWidget(total_time, self.reset_layout)
-        self.setCentralWidget(countdown_widget)
+        self.countdown_widget = CountdownWidget(total_time, started_at, self.reset_layout)
+        self.setCentralWidget(self.countdown_widget)
 
-        self.countdown_timer.timeout.connect(countdown_widget.update)
+        self.countdown_timer.timeout.connect(self.countdown_widget.update)
         self.countdown_timer.start(1000)
 
     def reset_layout(self):
