@@ -5,6 +5,7 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QFont
 
 import subprocess
+import weakref
 import os
 import time
 
@@ -60,9 +61,52 @@ class CountdownWidget(QWidget):
         time_passed = int(curr_time - self.started_at)
         self.label.setText('Time left: {}'.format(self.time_left - time_passed))
 
+    def notify(self):
+        self.close()
+
     def close(self):
         self.close_action()
         super().close()
+
+
+class TimedAction(object):
+
+    def __init__(self, total_time, action):
+        """
+        :param total_time: total_time in miliseconds
+        :param action: function to be called after "total_time"
+        :param observers: list of observers
+        """
+        self.total_time = total_time
+        self._command = action
+        self._observers = []
+
+    def start(self):
+        QTimer.singleShot(self.total_time, self.run)
+
+    def register(self, observer):
+        if not hasattr(observer, 'notify'):
+            raise NotImplementedError('Observers must implement "notify" method.')
+        self._observers.append(weakref.ref(observer))
+
+    def run(self):
+        self._notify()
+        self._command()
+
+    def _notify(self):
+        length = len(self._observers)
+        index = 0
+        while index < length:
+            ref = self._observers[index]
+            obs = ref()
+
+            if obs is None:
+                self._observers.pop(index)
+                length -= 1
+                continue
+
+            obs.notify()
+            index += 1
 
 
 
@@ -73,6 +117,7 @@ class Sleepy(QMainWindow):
 
         self.shutdown = lambda: subprocess.call(["shutdown", "/s"])
         self.sleep = lambda: os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
+        self.action = None
 
         self.setup_central_widget()
         self.show()
@@ -116,32 +161,34 @@ class Sleepy(QMainWindow):
         hours = int(self.hours.text())
         total_seconds = seconds + 60 * minutes + 60 * 60 * hours
 
-        action = None
+        self.action = None
         if self.rb_shutdown.isChecked():
-            action = self.shutdown
+            self.action = TimedAction(total_seconds * 1000, self.shutdown)
         elif self.rb_sleep.isChecked():
-            action = self.sleep
+            self.action = TimedAction(total_seconds * 1000, self.sleep)
 
-        if action is None:
+        if self.action is None:
             msg = QMessageBox()
             msg.setText('Select what action to execute(shutdown/sleep) !')
             msg.exec_()
             return
 
         self.setup_countdown(total_seconds)
-        QTimer.singleShot(total_seconds * 1000, action)
+        self.action.start()
 
     def setup_countdown(self, total_time):
         self.countdown_timer = QTimer()
         started_at = time.perf_counter()
 
-        self.countdown_widget = CountdownWidget(total_time, started_at, self.reset_layout)
-        self.setCentralWidget(self.countdown_widget)
+        countdown_widget = CountdownWidget(total_time, started_at, self.reset_layout)
+        self.action.register(countdown_widget)
+        self.setCentralWidget(countdown_widget)
 
-        self.countdown_timer.timeout.connect(self.countdown_widget.update)
+        self.countdown_timer.timeout.connect(countdown_widget.update)
         self.countdown_timer.start(1000)
 
     def reset_layout(self):
+        self.action = None
         self.setup_central_widget()
 
 
